@@ -2,6 +2,16 @@
 
 카메라로 식재료를 인식해 장바구니에 담고, 합계 금액과 보유 재료 기반 레시피를 보여 주는 1인 가구용 스마트 카트 데모입니다. Roboflow Hosted Inference, SQLite, PySide6 GUI를 연결했습니다.
 
+## 실행 화면
+
+식재료를 인식하면 장바구니에 자동으로 담기고, 가격과 총액을 즉시 계산합니다.
+
+![SMART CART 장바구니 화면](assets/app-cart.png)
+
+보유 재료 충족률이 기준을 만족하는 레시피는 필요한 추가 재료와 함께 표시합니다.
+
+![레시피 추천 화면](assets/recipe-recommendations.png)
+
 ## 주요 기능
 
 - 카메라 영상에서 신뢰도 70% 이상의 식재료를 인식
@@ -20,6 +30,16 @@ smart_cart/
 analysis.py               # 1인 가구 식품 소비행태 분석
 evaluate_pr_curve.py      # Roboflow 모델 PR Curve 평가
 ```
+
+## 시스템 설계
+
+카메라 프레임은 별도 QThread에서 Roboflow 추론으로 전달해 GUI가 멈추지 않도록 구성했습니다. 인식 결과는 SQLite의 상품·레시피 정보와 연결됩니다.
+
+![SMART CART 시스템 아키텍처](assets/system-architecture.png)
+
+상품과 레시피는 `recipe_ingredients` 관계 테이블로 연결됩니다.
+
+![SQLite 데이터베이스 구조](assets/database-structure.png)
 
 ## 설치 및 설정
 
@@ -65,3 +85,19 @@ uv run python evaluate_pr_curve.py
 ```
 
 생성되는 분석 그래프와 평가 결과는 `outputs/`에 저장되며 Git에서 제외됩니다.
+
+### 1인 가구 식품 소비행태
+
+![국내 1인 가구 증가 추이](assets/single-household-trend.png)
+
+![1인 가구 주요 식품 구매처](assets/food-purchase-places.png)
+
+![식품 장바구니 물가 체감](assets/price-burden.png)
+
+![1인 가구 간편식 선택 이유](assets/hmr-reasons.png)
+
+### YOLO 모델 성능 개선
+
+데이터셋 분할과 증강 설정을 조정해 최종 검증 세트에서 mAP@50 80.5%를 달성했습니다.
+
+![YOLO 모델 성능 개선 과정](assets/model-performance.png)
