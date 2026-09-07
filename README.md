@@ -1,41 +1,67 @@
-# 1인 가구 식품 소비행태 분석
+# SMART CART
 
-`datas`의 KOSIS 1인 가구 자료와 KREI 2025 식품소비행태조사 마이크로데이터를 사용해 발표용 분석을 재현합니다. 모든 KREI 비율에는 표본 가중치 `HHFWT`를 적용합니다.
+카메라로 식재료를 인식해 장바구니에 담고, 합계 금액과 보유 재료 기반 레시피를 보여 주는 1인 가구용 스마트 카트 데모입니다. Roboflow Hosted Inference, SQLite, PySide6 GUI를 연결했습니다.
+
+## 주요 기능
+
+- 카메라 영상에서 신뢰도 70% 이상의 식재료를 인식
+- 같은 상품이 2초 이상 연속 인식되면 장바구니에 자동 추가
+- SQLite 상품 DB를 바탕으로 가격·수량·총액 계산
+- 보유 재료 충족률이 **50% 이상인 레시피만** 추천
+- `green_onion`, `green onion`, `green-onion`, `대파` 등 대파 클래스명을 `l_onion`으로 통일해 DB와 연동
+
+## 프로젝트 구조
+
+```text
+smart_cart/
+  main.py                 # PySide6 GUI와 장바구니 흐름
+  roboflow_detector.py    # 카메라 및 Roboflow 추론
+  database.py             # 상품·레시피 SQLite DB
+analysis.py               # 1인 가구 식품 소비행태 분석
+evaluate_pr_curve.py      # Roboflow 모델 PR Curve 평가
+```
+
+## 설치 및 설정
+
+Python 3.12와 [uv](https://docs.astral.sh/uv/)가 필요합니다.
+
+```powershell
+uv sync
+```
+
+프로젝트 최상위에 `.env` 파일을 만들고 Roboflow API 키를 설정합니다. `.env`는 Git에 포함되지 않습니다.
+
+```env
+RF_API_KEY=발급받은_API_키
+ROBOFLOW_MODEL_ID=프로젝트ID/버전
+```
+
+`ROBOFLOW_MODEL_ID` 행을 생략하면 코드에 설정된 기본 모델 ID를 사용합니다.
 
 ## 실행
+
+```powershell
+uv run python -m smart_cart.main
+```
+
+API 키가 없으면 GUI와 카메라는 실행되지만 Roboflow 식재료 인식은 수행하지 않습니다.
+
+## 레시피 추천 기준
+
+장바구니에 담긴 식재료 수를 레시피의 필요 재료 수로 나눈 충족률을 계산합니다. 충족률이 50% 미만인 레시피는 추천 목록에서 제외하며, 나머지는 충족률과 보유 재료 수가 높은 순으로 표시합니다.
+
+## 분석 및 모델 평가
+
+원본 자료를 `datas/`에 준비한 뒤 아래 명령으로 1인 가구 식품 소비행태 그래프를 생성할 수 있습니다.
 
 ```powershell
 uv run python analysis.py
 ```
 
-생성되는 발표용 그래프는 `outputs`에 저장됩니다.
-
-## Roboflow 모델 PR Curve
-
-`.env`의 Roboflow API 키로 OZM 버전 4 테스트 세트를 내려받고 Hosted Inference 결과를 IoU 0.5 기준으로 평가합니다.
+Roboflow 테스트 세트 기준 PR Curve 평가는 다음과 같이 실행합니다.
 
 ```powershell
 uv run python evaluate_pr_curve.py
 ```
 
-그래프는 `outputs/roboflow_pr_curve.png`에 저장됩니다.
-
-## 검증된 핵심 결과
-
-| 질문 | 결과 | 사용 변수/자료 |
-|---|---:|---|
-| 1인 가구가 늘고 있는가? | 2020년 664.3만 → 2025년 824.4만 가구, **24.1% 증가** | KOSIS 2020~2025 |
-| 1인 가구의 주 식품 구매처는? | 동네 슈퍼/식자재마트 **36.6%** | `SQ3N == 1`, `A2_1`, `HHFWT` |
-| 식품 가격 부담이 있는가? | 장바구니 물가 상승 체감 **94.1%** | `A22 > 100`, `HHFWT` |
-| 간편식을 고르는 핵심 이유는? | 편리함 **42.3%**, 비용 절감 **33.9%**, 맛·다양성 **23.0%** | `SQ3N == 1`, `F22_1`, `HHFWT` |
-
-## 발표 결론
-
-증가하는 1인 가구는 오프라인 동네 슈퍼/식자재마트를 주요 식품 구매처로 사용하고, 높은 식품 가격 부담을 체감한다. 동시에 간편식에서는 편리함과 비용을 중요하게 고려한다. 따라서 카메라 기반 식품 인식(YOLO), 실시간 장바구니 합계, 상품 가격 DB 조회, 보유 재료 기반 레시피 추천 기능을 연결하는 근거가 된다.
-
-`analysis.py`는 네 개의 그래프를 생성한다.
-
-1. `01_single_household_trend.png` — 1인 가구 증가 추이
-2. `02_food_purchase_places.png` — 주요 식품 구매처
-3. `03_price_burden.png` — 장바구니 물가 체감
-4. `04_hmr_reasons.png` — 간편식 선택 이유
+생성되는 분석 그래프와 평가 결과는 `outputs/`에 저장되며 Git에서 제외됩니다.
